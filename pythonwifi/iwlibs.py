@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 # Python WiFi -- a library to access wireless card properties via Python
-# Copyright (C) 2004 - 2008 Róman Joost
+# Copyright (C) 2004 - 2008 Rï¿½man Joost
 # Copyright (C) 2008 - 2009 Sean Robinson
 #
 # Contributions from:
@@ -49,10 +48,10 @@ def getNICnames():
         ['lo', 'eth0']
 
     """
-    device = re.compile('[a-z]{2,}[0-9]*:')
+    device = re.compile("[a-z]{2,}[0-9]*:")
     ifnames = []
 
-    fp = open('/proc/net/dev', 'r')
+    fp = open("/proc/net/dev", "r")
     for line in fp:
         try:
             # append matching pattern, without the trailing colon
@@ -71,10 +70,10 @@ def getWNICnames():
         ['eth1', 'wifi0']
 
     """
-    device = re.compile('[a-z]{2,}[0-9]*:')
+    device = re.compile("[a-z,0-9]*:")
     ifnames = []
 
-    fp = open('/proc/net/wireless', 'r')
+    fp = open("/proc/net/wireless", "r")
     for line in fp:
         try:
             # append matching pattern, without the trailing colon
@@ -97,15 +96,15 @@ def getConfiguredWNICnames():
     """
     iwstruct = Iwstruct()
     ifnames = []
-    buff = array.array('c', '\0' * 1024)
+    buff = array.array("B", b"\0" * 1024)
     caddr_t, length = buff.buffer_info()
-    datastr = iwstruct.pack('iP', length, caddr_t)
+    datastr = iwstruct.pack("iP", length, caddr_t)
     result = iwstruct._fcntl(pythonwifi.flags.SIOCGIFCONF, datastr)
     # get the interface names out of the buffer
     for i in range(0, 1024, 32):
-        ifname = buff.tostring()[i:i + 32]
-        ifname = struct.unpack('32s', ifname)[0]
-        ifname = ifname.split('\0', 1)[0]
+        ifname = buff.tostring()[i : i + 32]
+        ifname = struct.unpack("32s", ifname)[0]
+        ifname = ifname.split(b"\0", 1)[0]
         if ifname:
             # verify if ifnames are really wifi devices
             wifi = Wireless(ifname)
@@ -144,7 +143,7 @@ class Wireless(object):
     def getAPaddr(self):
         """ Returns the access point MAC address.
 
-            >>> from iwlibs import Wireless, getNICnames
+            >>> from pythonwifi.iwlibs import Wireless, getNICnames
             >>> ifnames = getNICnames()
             >>> ifnames
             ['eth1', 'wifi0']
@@ -174,20 +173,20 @@ class Wireless(object):
 
         """
         addr = addr.upper()
-        if (addr == "AUTO" or addr == "ANY"):
+        if addr == "AUTO" or addr == "ANY":
             mac_addr = "\xFF" * pythonwifi.flags.ETH_ALEN
         elif addr == "OFF":
-            mac_addr = '\x00' * pythonwifi.flags.ETH_ALEN
+            mac_addr = b"\x00" * pythonwifi.flags.ETH_ALEN
         else:
             if ":" not in addr:
                 # not a hardware address
                 raise IOError(errno.ENOSYS, os.strerror(errno.ENOSYS))
-            mac_addr = "%c%c%c%c%c%c" % tuple(map(hex2int, addr.split(':')))
+            mac_addr = "%c%c%c%c%c%c" % tuple(map(hex2int, addr.split(":")))
 
         iwreq = self.iwstruct.pack("H14s", 1, mac_addr)
-        status, result = self.iwstruct.iw_set_ext(self.ifname,
-                                               pythonwifi.flags.SIOCSIWAP,
-                                               iwreq)
+        status, result = self.iwstruct.iw_set_ext(
+            self.ifname, pythonwifi.flags.SIOCSIWAP, iwreq
+        )
 
     def _formatBitrate(self, raw_bitrate):
         """ Returns formatted bitrate.
@@ -205,7 +204,7 @@ class Wireless(object):
     def getBitrate(self):
         """ Returns the device's currently set bit rate in Mbit.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getBitrate()
             '11 Mb/s'
@@ -217,7 +216,7 @@ class Wireless(object):
     def getBitrates(self):
         """ Returns the number of bitrates available for the device.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> num, rates = wifi.getBitrates()
             >>> num == len(rates)
@@ -257,7 +256,7 @@ class Wireless(object):
         """ Returns the number of channels and available frequencies for
            the device.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> num, rates = wifi.getChannelInfo()
             >>> num == len(rates)
@@ -273,18 +272,18 @@ class Wireless(object):
     def getEssid(self):
         """ Returns the current ESSID information.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getEssid()
             'romanofski'
 
         """
-        return self.wireless_info.getEssid()
+        return self.wireless_info.getEssid().decode("utf-8")
 
     def setEssid(self, essid):
         """ Sets the ESSID.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getEssid()
             'romanofski'
@@ -296,9 +295,11 @@ class Wireless(object):
         if len(essid) > pythonwifi.flags.IW_ESSID_MAX_SIZE:
             raise OverflowError(errno.EOVERFLOW, os.strerror(errno.EOVERFLOW))
         iwpoint = Iwpoint(essid, 1)
-        status, result = self.iwstruct.iw_set_ext(self.ifname,
-                                             pythonwifi.flags.SIOCSIWESSID,
-                                             data=iwpoint.packed_data)
+        status, result = self.iwstruct.iw_set_ext(
+            self.ifname,
+            pythonwifi.flags.SIOCSIWESSID,
+            data=iwpoint.packed_data,
+        )
 
     def getEncryption(self):
         """ Get the association mode, which is probably a string of '*',
@@ -307,7 +308,7 @@ class Wireless(object):
             As a normal user, you will get an 'Operation not permitted'
             error:
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getEncryption()
             (1, 'Operation not permitted')
@@ -315,20 +316,22 @@ class Wireless(object):
         """
         # use an IW_ENCODING_TOKEN_MAX-cell array of NULLs
         #   as space for ioctl to write encryption info
-        iwpoint = Iwpoint('\x00' * pythonwifi.flags.IW_ENCODING_TOKEN_MAX)
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                             pythonwifi.flags.SIOCGIWENCODE,
-                                             data=iwpoint.packed_data)
+        iwpoint = Iwpoint(b"\x00" * pythonwifi.flags.IW_ENCODING_TOKEN_MAX)
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname,
+            pythonwifi.flags.SIOCGIWENCODE,
+            data=iwpoint.packed_data,
+        )
         iwpoint.update(result)
 
         if iwpoint.flags & pythonwifi.flags.IW_ENCODE_NOKEY > 0:
-            return '**' * iwpoint.length
+            return "**" * iwpoint.length
         elif iwpoint.flags & pythonwifi.flags.IW_ENCODE_OPEN > 0:
-            return 'open'
+            return "open"
         elif iwpoint.flags & pythonwifi.flags.IW_ENCODE_RESTRICTED > 0:
-            return 'restricted'
+            return "restricted"
         elif iwpoint.flags & pythonwifi.flags.IW_ENCODE_DISABLED > 0:
-            return 'off'
+            return "off"
 
     def setEncryption(self, mode):
         """ Set the association mode.
@@ -336,7 +339,7 @@ class Wireless(object):
             As a normal user, you will get an 'Operation not permitted'
             error:
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.setEncryption()
             (1, 'Operation not permitted')
@@ -346,21 +349,30 @@ class Wireless(object):
             mode = mode
         else:
             mode = mode.upper()
-        numeric_mode = self.getEncryption(symbolic=False)
+        numeric_mode = self.getEncryption()
         # turn off all associate modes, but do not touch other flag bits
-        numeric_mode = numeric_mode & ~pythonwifi.flags.IW_ENCODE_OPEN \
-                        & ~pythonwifi.flags.IW_ENCODE_RESTRICTED \
-                        & ~pythonwifi.flags.IW_ENCODE_DISABLED
-        if (mode == 'OPEN') or (mode == pythonwifi.flags.IW_ENCODE_OPEN):
+        numeric_mode = (
+            numeric_mode
+            & ~pythonwifi.flags.IW_ENCODE_OPEN
+            & ~pythonwifi.flags.IW_ENCODE_RESTRICTED
+            & ~pythonwifi.flags.IW_ENCODE_DISABLED
+        )
+        if (mode == "OPEN") or (mode == pythonwifi.flags.IW_ENCODE_OPEN):
             numeric_mode = numeric_mode | pythonwifi.flags.IW_ENCODE_OPEN
-        elif (mode == 'RESTRICTED') or (mode == pythonwifi.flags.IW_ENCODE_RESTRICTED):
+        elif (mode == "RESTRICTED") or (
+            mode == pythonwifi.flags.IW_ENCODE_RESTRICTED
+        ):
             numeric_mode = numeric_mode | pythonwifi.flags.IW_ENCODE_RESTRICTED
-        elif (mode == 'OFF') or (mode == pythonwifi.flags.IW_ENCODE_DISABLED):
+        elif (mode == "OFF") or (mode == pythonwifi.flags.IW_ENCODE_DISABLED):
             numeric_mode = numeric_mode | pythonwifi.flags.IW_ENCODE_DISABLED
-        iwpoint = Iwpoint('\x00' * pythonwifi.flags.IW_ENCODING_TOKEN_MAX, numeric_mode)
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                             pythonwifi.flags.SIOCSIWENCODE,
-                                             data=iwpoint.packed_data)
+        iwpoint = Iwpoint(
+            b"\x00" * pythonwifi.flags.IW_ENCODING_TOKEN_MAX, numeric_mode
+        )
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname,
+            pythonwifi.flags.SIOCSIWENCODE,
+            data=iwpoint.packed_data,
+        )
 
     def getKey(self, key=0, formatted=True):
         """ Get an encryption key.
@@ -370,7 +382,7 @@ class Wireless(object):
             As a normal user, you will get an 'Operation not permitted'
             error:
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getKey()
             ABCD-9512-34
@@ -379,7 +391,7 @@ class Wireless(object):
         iwpoint = self.wireless_info.getKey(key)
 
         # build a list of each char in key
-        raw_key = map(ord, iwpoint.buff.tolist())[:iwpoint.length]
+        raw_key = map(ord, iwpoint.buff.tolist())[: iwpoint.length]
         if sum(raw_key) == 0:
             return "off"
         if not formatted:
@@ -389,7 +401,7 @@ class Wireless(object):
         key = "%.2X" % raw_key[0]
         for i in range(1, iwpoint.length):
             if (i & 0x1) == 0:
-                    key = key + '-'
+                key = key + "-"
             key = key + "%.2X" % raw_key[i]
         return key
 
@@ -399,7 +411,7 @@ class Wireless(object):
             As a normal user, you will get an 'Operation not permitted'
             error:
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.setKey()
 
@@ -408,18 +420,21 @@ class Wireless(object):
             raise IndexError
 
         if key:
-            cooked_key = ''
+            cooked_key = ""
             for i in range(0, len(key), 2):
-                cooked_key = cooked_key + chr(hex2int(key[i:i + 2]))
+                cooked_key = cooked_key + chr(hex2int(key[i : i + 2]))
         else:
             raw_key = self.getKey(index, False)
             cooked_key = map(chr, raw_key)
 
-        iwpoint = Iwpoint(cooked_key,
-                    index + pythonwifi.flags.IW_ENCODE_ENABLED)
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                             pythonwifi.flags.SIOCSIWENCODE,
-                                             data=iwpoint.packed_data)
+        iwpoint = Iwpoint(
+            cooked_key, index + pythonwifi.flags.IW_ENCODE_ENABLED
+        )
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname,
+            pythonwifi.flags.SIOCSIWENCODE,
+            data=iwpoint.packed_data,
+        )
 
     def getKeys(self):
         """ Get all encryption keys.
@@ -429,7 +444,7 @@ class Wireless(object):
             As a normal user, you will get a 'Operation not permitted'
             error:
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getKeys()
             [(1, '1234-5678-91'), (2, None), (3, 'ABCD-EFAB-CD'), (4, None)]
@@ -449,7 +464,7 @@ class Wireless(object):
             threshold turned on, you'll get an int. If it's turned off
             you'll get a string: 'off'.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getFragmentation()
             'off'
@@ -463,7 +478,7 @@ class Wireless(object):
     def getFrequency(self):
         """ Returns currently set frequency of the card.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getFrequency()
             '2.417 GHz'
@@ -481,11 +496,15 @@ class Wireless(object):
         format = "lhBB"
         iwstruct = Iwstruct()
         if freq == "auto":
-            iwreq = iwstruct.pack(format, -1, 0, 0, pythonwifi.flags.IW_FREQ_AUTO)
+            iwreq = iwstruct.pack(
+                format, -1, 0, 0, pythonwifi.flags.IW_FREQ_AUTO
+            )
         else:
             if freq == "fixed":
                 freq = self.getFrequency()
-            freq_pattern = re.compile("([\d\.]+)\s?([GMk])\w?", re.I | re.M | re.S)
+            freq_pattern = re.compile(
+                "([\d\.]+)\s?([GMk])\w?", re.I | re.M | re.S
+            )
             freq_match = freq_pattern.search(freq)
             if freq_match is None:
                 # match failed, try to just find a number (no units)
@@ -508,15 +527,17 @@ class Wireless(object):
             else:
                 m = int(freq_num)
                 e = 0
-            iwreq = iwstruct.pack(format, m, e, 0, pythonwifi.flags.IW_FREQ_FIXED)
-        status, result = iwstruct.iw_set_ext(self.ifname,
-                                               pythonwifi.flags.SIOCSIWFREQ,
-                                               iwreq)
+            iwreq = iwstruct.pack(
+                format, m, e, 0, pythonwifi.flags.IW_FREQ_FIXED
+            )
+        status, result = iwstruct.iw_set_ext(
+            self.ifname, pythonwifi.flags.SIOCSIWFREQ, iwreq
+        )
 
     def getMode(self):
         """ Returns currently set operation mode.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getMode()
             'Managed'
@@ -534,26 +555,26 @@ class Wireless(object):
             wifimode = this_modes.index(mode)
         except ValueError:
             raise ValueError("Invalid mode")
-        datastr = self.iwstruct.pack('I', wifimode)
-        status, result = self.iwstruct.iw_set_ext(self.ifname,
-                                             pythonwifi.flags.SIOCSIWMODE,
-                                             data=datastr)
+        datastr = self.iwstruct.pack("I", wifimode)
+        status, result = self.iwstruct.iw_set_ext(
+            self.ifname, pythonwifi.flags.SIOCSIWMODE, data=datastr
+        )
 
     def getWirelessName(self):
         """ Returns the wireless name.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getWirelessName()
             'IEEE 802.11-DS'
 
         """
-        return self.wireless_info.getWirelessName()
+        return self.wireless_info.getWirelessName().decode("utf-8")
 
     def getPowermanagement(self):
         """ Returns the power management settings.
 
-            #>>> from iwlibs import Wireless
+            #>>> from pythonwifi.iwlibs import Wireless
             #>>> wifi = Wireless('eth1')
             #>>> wifi.getPowermanagement()
             #'off'
@@ -561,16 +582,18 @@ class Wireless(object):
         """
         iwrange = Iwrange(self.ifname)
         iwparam = self.wireless_info.getPower()
-        return (iwrange.pm_capa,
-                (iwrange.pmp_flags, iwrange.min_pmp, iwrange.max_pmp),
-                (iwrange.pmt_flags, iwrange.min_pmt, iwrange.max_pmt),
-                (iwrange.pms_flags, iwrange.min_pms, iwrange.max_pms),
-                iwparam)
+        return (
+            iwrange.pm_capa,
+            (iwrange.pmp_flags, iwrange.min_pmp, iwrange.max_pmp),
+            (iwrange.pmt_flags, iwrange.min_pmt, iwrange.max_pmt),
+            (iwrange.pms_flags, iwrange.min_pms, iwrange.max_pms),
+            iwparam,
+        )
 
     def getQualityMax(self):
         """ Returns an Iwquality object with maximum quality information.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> mq = wifi.getQualityMax()
             >>> print "quality:", mq.quality, "signal:", mq.siglevel, "noise:", mq.nlevel
@@ -585,7 +608,7 @@ class Wireless(object):
     def getQualityAvg(self):
         """ Returns an Iwquality object with average quality information.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> aq = wifi.getQualityAvg()
             >>> print "quality:", aq.quality, "signal:", aq.siglevel, "noise:", aq.nlevel
@@ -604,7 +627,7 @@ class Wireless(object):
                 "Most cards have MAC retransmissions, and some allow to set
                 the behaviour of the retry mechanism."
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getRetrylimit()
             16
@@ -625,7 +648,7 @@ class Wireless(object):
                 smallest packet for which the node sends RTS; a value equal
                 to the maximum packet size disable the mechanism."
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getRTS()
             'off'
@@ -648,7 +671,7 @@ class Wireless(object):
                 by the hardware or a percentage, negative values are
                 assumed to be dBm."
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getSensitivity()
             'off'
@@ -660,12 +683,13 @@ class Wireless(object):
     def getTXPower(self):
         """ Returns the transmit power in dBm.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getTXPower()
             '17 dBm'
 
         """
+
         def mw2dbm(self, mwatt):
             """ Converts mW to dBm (float). """
             if mwatt == 0:
@@ -683,8 +707,12 @@ class Wireless(object):
         iwstats = Iwstats(self.ifname)
         if iwstats.errorflag > 0:
             return (iwstats.errorflag, iwstats.error)
-        return [iwstats.status, iwstats.qual, iwstats.discard,
-            iwstats.missed_beacon]
+        return [
+            iwstats.status,
+            iwstats.qual,
+            iwstats.discard,
+            iwstats.missed_beacon,
+        ]
 
     def scan(self):
         """ Returns Iwscanresult objects, after a successful scan. """
@@ -692,8 +720,9 @@ class Wireless(object):
 
     def commit(self):
         """ Commit pending changes. """
-        status, result = self.iwstruct.iw_set_ext(self.ifname,
-                                                  pythonwifi.flags.SIOCSIWCOMMIT)
+        status, result = self.iwstruct.iw_set_ext(
+            self.ifname, pythonwifi.flags.SIOCSIWCOMMIT
+        )
         return (status, result)
 
 
@@ -711,26 +740,27 @@ class WirelessConfig(object):
         self.sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.ifname = ifname
         self.iwstruct = Iwstruct()
-        #self.nwid = Iwparam
+        # self.nwid = Iwparam
         self.freq_flags = 0
 
     def getWirelessName(self):
         """ Returns the wireless name.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getWirelessName()
             'IEEE 802.11-DS'
 
         """
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                             pythonwifi.flags.SIOCGIWNAME)
-        return result.tostring().strip('\x00')
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname, pythonwifi.flags.SIOCGIWNAME
+        )
+        return result.tostring().strip(b"\x00")
 
     def getEncryption(self):
         """ Returns the encryption status.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getEncryption()
             'off'
@@ -738,10 +768,12 @@ class WirelessConfig(object):
         """
         # use an IW_ENCODING_TOKEN_MAX-cell array of NULLs
         #   as space for ioctl to write encryption info
-        iwpoint = Iwpoint('\x00' * pythonwifi.flags.IW_ENCODING_TOKEN_MAX)
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                             pythonwifi.flags.SIOCGIWENCODE,
-                                             data=iwpoint.packed_data)
+        iwpoint = Iwpoint(b"\x00" * pythonwifi.flags.IW_ENCODING_TOKEN_MAX)
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname,
+            pythonwifi.flags.SIOCGIWENCODE,
+            data=iwpoint.packed_data,
+        )
         iwpoint.update(result)
 
         return iwpoint
@@ -749,14 +781,15 @@ class WirelessConfig(object):
     def getFrequency(self):
         """ Returns currently set frequency of the card.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getFrequency()
             '2.417 GHz'
 
         """
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                                  pythonwifi.flags.SIOCGIWFREQ)
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname, pythonwifi.flags.SIOCGIWFREQ
+        )
         return Iwfreq(result)
 
     def getKey(self, key=0):
@@ -767,7 +800,7 @@ class WirelessConfig(object):
             As a normal user, you will get an 'Operation not permitted'
             error:
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi_conf = WirelessConfig('eth1')
             >>> isinstance(wifi_conf.getKey(), Iwpoint)
             True
@@ -775,17 +808,21 @@ class WirelessConfig(object):
         """
         # use an IW_ENCODING_TOKEN_MAX-cell array of NULLs
         #   as space for ioctl to write encryption info
-        iwpoint = Iwpoint('\x00' * pythonwifi.flags.IW_ENCODING_TOKEN_MAX, key)
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                             pythonwifi.flags.SIOCGIWENCODE,
-                                             data=iwpoint.packed_data)
+        iwpoint = Iwpoint(
+            b"\x00" * pythonwifi.flags.IW_ENCODING_TOKEN_MAX, key
+        )
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname,
+            pythonwifi.flags.SIOCGIWENCODE,
+            data=iwpoint.packed_data,
+        )
         iwpoint.update(result)
         return iwpoint
 
     def getEssid(self):
         """ Returns the current ESSID information.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getEssid()
             'romanofski'
@@ -793,25 +830,28 @@ class WirelessConfig(object):
         """
         # use an IW_ESSID_MAX_SIZE-cell array of NULLs
         #   as space for ioctl to write ESSID
-        iwpoint = Iwpoint('\x00' * pythonwifi.flags.IW_ESSID_MAX_SIZE)
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                             pythonwifi.flags.SIOCGIWESSID,
-                                             data=iwpoint.packed_data)
+        iwpoint = Iwpoint(b"\x00" * pythonwifi.flags.IW_ESSID_MAX_SIZE)
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname,
+            pythonwifi.flags.SIOCGIWESSID,
+            data=iwpoint.packed_data,
+        )
         raw_essid = iwpoint.buff.tostring()
-        return raw_essid.strip('\x00')
+        return raw_essid.strip(b"\x00")
 
     def getMode(self):
         """ Returns currently set operation mode.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getMode()
             'Managed'
 
         """
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                             pythonwifi.flags.SIOCGIWMODE)
-        return self.iwstruct.unpack('I', result[:4])[0]
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname, pythonwifi.flags.SIOCGIWMODE
+        )
+        return self.iwstruct.unpack("I", result[:4])[0]
 
 
 class WirelessInfo(WirelessConfig):
@@ -854,7 +894,7 @@ class WirelessInfo(WirelessConfig):
                 by the hardware or a percentage, negative values are
                 assumed to be dBm."
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getSensitivity()
             'off'
@@ -865,7 +905,7 @@ class WirelessInfo(WirelessConfig):
     def getAPaddr(self):
         """ Returns the access point MAC address.
 
-            >>> from iwlibs import Wireless, getNICnames
+            >>> from pythonwifi.iwlibs import Wireless, getNICnames
             >>> ifnames = getNICnames()
             >>> ifnames
             ['eth1', 'wifi0']
@@ -885,17 +925,17 @@ class WirelessInfo(WirelessConfig):
 
         """
         buff, datastr = self.iwstruct.pack_wrq(32)
-        status, result = self.iwstruct.iw_get_ext(self.ifname,
-                                                  pythonwifi.flags.SIOCGIWAP,
-                                                  data=datastr)
+        status, result = self.iwstruct.iw_get_ext(
+            self.ifname, pythonwifi.flags.SIOCGIWAP, data=datastr
+        )
         # Extracts MAC address from packed data and returns it as a str.
-        mac_addr = struct.unpack('xxBBBBBB', result[:8])
+        mac_addr = struct.unpack("xxBBBBBB", result[:8])
         return "%02X:%02X:%02X:%02X:%02X:%02X" % mac_addr
 
     def getBitrate(self):
         """ Returns the device's currently set bit rate.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getBitrate()
             '11 Mb/s'
@@ -915,7 +955,7 @@ class WirelessInfo(WirelessConfig):
     def getRTS(self):
         """ Returns the RTS threshold.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getRTS()
             'off'
@@ -926,7 +966,7 @@ class WirelessInfo(WirelessConfig):
     def getFragmentation(self):
         """ Returns the fragmentation threshold.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getFragmentation()
             'off'
@@ -937,7 +977,7 @@ class WirelessInfo(WirelessConfig):
     def getPower(self):
         """ Returns the power management settings.
 
-            #>>> from iwlibs import Wireless
+            #>>> from pythonwifi.iwlibs import Wireless
             #>>> wifi = Wireless('eth1')
             #>>> wifi.getPowermanagement()
             #'off'
@@ -948,7 +988,7 @@ class WirelessInfo(WirelessConfig):
     def getTXPower(self):
         """ Returns the transmit power in dBm.
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getTXPower()
             '17 dBm'
@@ -963,7 +1003,7 @@ class WirelessInfo(WirelessConfig):
                 "Most cards have MAC retransmissions, and some allow to set
                 the behaviour of the retry mechanism."
 
-            >>> from iwlibs import Wireless
+            >>> from pythonwifi.iwlibs import Wireless
             >>> wifi = Wireless('eth1')
             >>> wifi.getRetrylimit()
             16
@@ -984,7 +1024,7 @@ class Iwstruct(object):
         size = struct.calcsize(fmt)
         idx = self.idx
 
-        datastr = data[idx:idx + size]
+        datastr = data[idx : idx + size]
         self.idx = idx + size
         value = struct.unpack(fmt, datastr)
 
@@ -1005,17 +1045,17 @@ class Iwstruct(object):
         # ioctl itself looks for the pointer to the address in our
         # memory and the size of it.
         # Don't change the order how the structure is packed!!!
-        buff = array.array('c', '\0' * buffsize)
+        buff = array.array("B", b"\0" * buffsize)
         caddr_t, length = buff.buffer_info()
-        datastr = struct.pack('Pi', caddr_t, length)
+        datastr = struct.pack("Pi", caddr_t, length)
         return buff, datastr
 
     def pack_test(self, string, buffsize):
         """ Packs wireless request data for sending it to the kernel. """
         buffsize = buffsize - len(string)
-        buff = array.array('c', string + '\0' * buffsize)
+        buff = array.array("B", string.encode() + b"\0" * buffsize)
         caddr_t, length = buff.buffer_info()
-        s = struct.pack('PHH', caddr_t, length, 1)
+        s = struct.pack("PHH", caddr_t, length, 1)
         return buff, s
 
     def unpack(self, fmt, packed_data):
@@ -1028,25 +1068,27 @@ class Iwstruct(object):
     def iw_get_ext(self, ifname, request, data=None):
         """ Read information from ifname. """
         buff = pythonwifi.flags.IFNAMSIZE - len(ifname)
-        ifreq = array.array('c', ifname + '\0' * buff)
+        if isinstance(ifname, str):
+            ifname = ifname.encode()
+        ifreq = array.array("B", ifname + b"\0" * buff)
         # put some additional data behind the interface name
         if data is not None:
             ifreq.extend(data)
         else:
             # extend to 32 bytes for ioctl payload
-            ifreq.extend('\0' * 16)
+            ifreq.extend(b"\0" * 16)
 
         result = self._fcntl(request, ifreq)
-        return (result, ifreq[pythonwifi.flags.IFNAMSIZE:])
+        return result, ifreq[pythonwifi.flags.IFNAMSIZE :]
 
     def iw_set_ext(self, ifname, operation, data=None):
         """ Set options on ifname. """
         return self.iw_get_ext(ifname, operation, data)
 
-    #def getMAC(self, packed_data):
-        #""" Extracts MAC address from packed data and returns it as a str. """
-        #mac_addr = struct.unpack('xxBBBBBB', packed_data[:8])
-        #return "%02X:%02X:%02X:%02X:%02X:%02X" % mac_addr
+    # def getMAC(self, packed_data):
+    # """ Extracts MAC address from packed data and returns it as a str. """
+    # mac_addr = struct.unpack('xxBBBBBB', packed_data[:8])
+    # return "%02X:%02X:%02X:%02X:%02X:%02X" % mac_addr
 
 
 class Iwparam(object):
@@ -1075,8 +1117,9 @@ class Iwparam(object):
     def _parse(self, data):
         """ Unpacks iwparam data. """
         iwstruct = Iwstruct()
-        self.value, self.fixed, self.disabled, self.flags = \
-            iwstruct.parse_data(self.fmt, data)
+        self.value, self.fixed, self.disabled, self.flags = iwstruct.parse_data(
+            self.fmt, data
+        )
 
 
 class Iwfreq(object):
@@ -1098,7 +1141,9 @@ class Iwfreq(object):
     def parse(self, data):
         """ Unpacks iw_freq. """
         size = struct.calcsize(self.fmt)
-        self.m, self.e, self.index, self.flags = struct.unpack(self.fmt, data[:size])
+        self.m, self.e, self.index, self.flags = struct.unpack(
+            self.fmt, data[:size]
+        )
 
     def getFrequency(self):
         """ Returns frequency or channel, depending on the driver. """
@@ -1142,9 +1187,9 @@ class Iwstats(object):
         """
         iwstruct = Iwstruct()
         buff, s = iwstruct.pack_wrq(32)
-        i, result = iwstruct.iw_get_ext(self.ifname,
-                                        pythonwifi.flags.SIOCGIWSTATS,
-                                        data=s)
+        i, result = iwstruct.iw_get_ext(
+            self.ifname, pythonwifi.flags.SIOCGIWSTATS, data=s
+        )
         if i > 0:
             self.error = result
             self.errorflag = i
@@ -1157,12 +1202,14 @@ class Iwstats(object):
         iwstats_data = iwstruct.parse_data(self.fmt, data)
 
         self.status = iwstats_data[0:2]
-        self.qual.quality, self.qual.siglevel, self.qual.nlevel, \
-            self.qual.updated = iwstats_data[2:6]
+        self.qual.quality, self.qual.siglevel, self.qual.nlevel, self.qual.updated = iwstats_data[
+            2:6
+        ]
         nwid, code, frag, retries, iwflags = iwstats_data[6:11]
         self.missed_beacon = iwstats_data[11:12][0]
-        self.discard = makedict(nwid=nwid, code=code,
-            fragment=frag, retries=retries, misc=iwflags)
+        self.discard = makedict(
+            nwid=nwid, code=code, fragment=frag, retries=retries, misc=iwflags
+        )
 
 
 class Iwquality(object):
@@ -1203,6 +1250,7 @@ class Iwquality(object):
     def setSignallevel(self, siglevel):
         """ Sets signal level. """
         self.siglevel = siglevel
+
     signallevel = property(getSignallevel, setSignallevel)
 
     def getNoiselevel(self):
@@ -1213,6 +1261,7 @@ class Iwquality(object):
         # currently not implemented
         # XXX
         self.nlevel = val
+
     noiselevel = property(getNoiselevel, setNoiselevel)
 
 
@@ -1223,29 +1272,39 @@ class Iwpoint(object):
         if data is None:
             raise ValueError("data must be passed to Iwpoint")
         # P pointer to data, H length, H flags
-        self.fmt = 'PHH'
+        self.fmt = "PHH"
         self.flags = flags
-        self.buff = array.array('c', data)
+        if isinstance(data, str):
+            data = data.encode()
+        self.buff = array.array("B", data)
         self.caddr_t, self.length = self.buff.buffer_info()
-        self.packed_data = struct.pack(self.fmt, self.caddr_t,
-                                       self.length, self.flags)
+        self.packed_data = struct.pack(
+            self.fmt, self.caddr_t, self.length, self.flags
+        )
 
     def update(self, packed_data):
         """ Updates the object attributes. """
         self.packed_data = packed_data
-        self.caddr_t, self.length, self.flags = struct.unpack(self.fmt,
-                                                              self.packed_data)
+        self.caddr_t, self.length, self.flags = struct.unpack(
+            self.fmt, self.packed_data
+        )
 
 
 class Iwrange(object):
     """ Holds iwrange struct. """
 
     def __init__(self, ifname):
-        self.fmt = "IIIHB6Ii4B4BB" + pythonwifi.flags.IW_MAX_BITRATES * "i" + \
-                   "2i2i2i2i3H" + pythonwifi.flags.IW_MAX_ENCODING_SIZES * "H" + \
-                   "2BBHB" + pythonwifi.flags.IW_MAX_TXPOWER * "i" + \
-                   "2B3H2i2iHB" + pythonwifi.flags.IW_MAX_FREQUENCIES * "ihBB" + \
-                   "IiiHiI"
+        self.fmt = (
+            "IIIHB6Ii4B4BB"
+            + pythonwifi.flags.IW_MAX_BITRATES * "i"
+            + "2i2i2i2i3H"
+            + pythonwifi.flags.IW_MAX_ENCODING_SIZES * "H"
+            + "2BBHB"
+            + pythonwifi.flags.IW_MAX_TXPOWER * "i"
+            + "2B3H2i2iHB"
+            + pythonwifi.flags.IW_MAX_FREQUENCIES * "ihBB"
+            + "IiiHiI"
+        )
 
         self.ifname = ifname
         self.errorflag = 0
@@ -1317,9 +1376,9 @@ class Iwrange(object):
         """
         iwstruct = Iwstruct()
         buff, s = iwstruct.pack_wrq(640)
-        status, result = iwstruct.iw_get_ext(self.ifname,
-                                        pythonwifi.flags.SIOCGIWRANGE,
-                                        data=s)
+        status, result = iwstruct.iw_get_ext(
+            self.ifname, pythonwifi.flags.SIOCGIWRANGE, data=s
+        )
         data = buff.tostring()
         self._parse(data)
 
@@ -1335,7 +1394,7 @@ class Iwrange(object):
         self.max_qual.setValues(result[12:16])
         self.avg_qual.setValues(result[16:20])
         self.num_bitrates = result[20]
-        raw_bitrates = result[21:21 + self.num_bitrates]
+        raw_bitrates = result[21 : 21 + self.num_bitrates]
         for rate in raw_bitrates:
             if rate is not None:
                 self.bitrates.append(rate)
@@ -1360,7 +1419,7 @@ class Iwrange(object):
         freq = result[96:224]
         i = self.num_frequency
         for x in range(0, len(freq), 4):
-            iwfreq = Iwfreq(freq[x:x + 4])
+            iwfreq = Iwfreq(freq[x : x + 4])
             fq = iwfreq.getFrequency()
             if fq is not None:
                 self.frequencies.append(fq)
@@ -1396,9 +1455,9 @@ class Iwscan(object):
             # Triggers the scan
             iwstruct = Iwstruct()
             datastr = iwstruct.pack("Pii", 0, 0, 0)
-            status, result = iwstruct.iw_set_ext(self.ifname,
-                                                pythonwifi.flags.SIOCSIWSCAN,
-                                                datastr)
+            status, result = iwstruct.iw_set_ext(
+                self.ifname, pythonwifi.flags.SIOCSIWSCAN, datastr
+            )
             self.getScan()
 
     def __iter__(self):
@@ -1421,17 +1480,17 @@ class Iwscan(object):
         bufflen = pythonwifi.flags.IW_SCAN_MAX_DATA
 
         # Make repeated requests for scan with various recovery schemes
-        while (True):
+        while True:
             buff, datastr = iwstruct.pack_wrq(bufflen)
             try:
-                status, result = iwstruct.iw_get_ext(self.ifname,
-                                                pythonwifi.flags.SIOCGIWSCAN,
-                                                data=datastr)
+                status, result = iwstruct.iw_get_ext(
+                    self.ifname, pythonwifi.flags.SIOCGIWSCAN, data=datastr
+                )
             except IOError as error_number:
                 if error_number == errno.E2BIG:
                     # Keep resizing the buffer until it's
                     #   large enough to hold the scan
-                    pbuff, newlen = iwstruct.unpack('Pi', datastr)
+                    pbuff, newlen = iwstruct.unpack("Pi", datastr)
                     if bufflen < newlen:
                         # the driver told us how big to make the buffer
                         bufflen = newlen
@@ -1450,7 +1509,7 @@ class Iwscan(object):
                 break
 
         # unpack the buffer pointer and length
-        pbuff, reslen = iwstruct.unpack('Pi', datastr)
+        pbuff, reslen = iwstruct.unpack("Pi", datastr)
         if reslen > 0:
             # Initialize the stream, and turn it into an enumerator
             self.aplist = self._parse(buff.tostring())
@@ -1465,10 +1524,11 @@ class Iwscan(object):
         aplist = []
 
         # Run through the stream until it is too short to contain a command
-        while (len(data) >= pythonwifi.flags.IW_EV_LCP_PK_LEN):
+        while len(data) >= pythonwifi.flags.IW_EV_LCP_PK_LEN:
             # Unpack the header
-            length, cmd = iwstruct.unpack('HH',
-                              data[:pythonwifi.flags.IW_EV_LCP_PK_LEN])
+            length, cmd = iwstruct.unpack(
+                "HH", data[: pythonwifi.flags.IW_EV_LCP_PK_LEN]
+            )
             # If the event length is too short to contain valid data,
             # then break, because we're probably at the end of the cell's data
             if length < pythonwifi.flags.IW_EV_LCP_PK_LEN:
@@ -1478,13 +1538,17 @@ class Iwscan(object):
                 if scanresult:
                     aplist.append(scanresult)
                 scanresult = Iwscanresult(
-                        data[pythonwifi.flags.IW_EV_LCP_PK_LEN:length],
-                        self.range)
+                    data[pythonwifi.flags.IW_EV_LCP_PK_LEN : length],
+                    self.range,
+                )
             elif scanresult is None:
-                raise RuntimeError("Attempting to add an event without AP data.")
+                raise RuntimeError(
+                    "Attempting to add an event without AP data."
+                )
             else:
-                scanresult.addEvent(cmd,
-                        data[pythonwifi.flags.IW_EV_LCP_PK_LEN:length])
+                scanresult.addEvent(
+                    cmd, data[pythonwifi.flags.IW_EV_LCP_PK_LEN : length]
+                )
             # We're finished with the previous event
             data = data[length:]
 
@@ -1493,7 +1557,7 @@ class Iwscan(object):
             if scanresult.bssid != "00:00:00:00:00:00":
                 aplist.append(scanresult)
             else:
-                raise RuntimeError('Attempting to add an AP without a bssid')
+                raise RuntimeError("Attempting to add an AP without a bssid")
         return aplist
 
 
@@ -1507,7 +1571,8 @@ class Iwscanresult(object):
         """ Initialize the scan result with the access point data. """
         self.range = iwrange
         self.bssid = "%02X:%02X:%02X:%02X:%02X:%02X" % (
-                        struct.unpack('BBBBBB', data[2:8]))
+            struct.unpack("BBBBBB", data[2:8])
+        )
         self.essid = None
         self.mode = None
         self.rate = []
@@ -1524,29 +1589,41 @@ class Iwscanresult(object):
             If the data is valid but unused, False is returned
 
         """
-        if ((cmd in range(pythonwifi.flags.SIOCIWFIRST,
-                          pythonwifi.flags.SIOCIWLAST + 1)) or
-            (cmd in range(pythonwifi.flags.IWEVFIRST,
-                          pythonwifi.flags.IWEVLAST + 1))):
+        if (
+            cmd
+            in range(
+                pythonwifi.flags.SIOCIWFIRST, pythonwifi.flags.SIOCIWLAST + 1
+            )
+        ) or (
+            cmd
+            in range(pythonwifi.flags.IWEVFIRST, pythonwifi.flags.IWEVLAST + 1)
+        ):
             if cmd == pythonwifi.flags.SIOCGIWNWID:
                 pass
             elif cmd == pythonwifi.flags.SIOCGIWFREQ:
                 self.frequency = Iwfreq(data)
             elif cmd == pythonwifi.flags.SIOCGIWMODE:
-                raw_mode = struct.unpack('I', data[:4])[0]
+                raw_mode = struct.unpack("I", data[:4])[0]
                 self.mode = pythonwifi.flags.modes[raw_mode]
             elif cmd == pythonwifi.flags.SIOCGIWNAME:
-                self.protocol = data[:len(data) - 2]
+                self.protocol = data[: len(data) - 2]
             elif cmd == pythonwifi.flags.SIOCGIWESSID:
                 self.essid = data[4:]
             elif cmd == pythonwifi.flags.SIOCGIWENCODE:
                 data = struct.unpack("B" * len(data), data)
                 self.encode = Iwpoint("")
-                self.encode.update(struct.pack('PHH',
-                    (int(data[0]) << 16) + int(data[1]), data[2] << 8, data[3] << 8))
-                if (self.encode.caddr_t is None):
-                    self.encode.flags = \
+                self.encode.update(
+                    struct.pack(
+                        "PHH",
+                        (int(data[0]) << 16) + int(data[1]),
+                        data[2] << 8,
+                        data[3] << 8,
+                    )
+                )
+                if self.encode.caddr_t is None:
+                    self.encode.flags = (
                         self.encode.flags | pythonwifi.flags.IW_ENCODE_NOKEY
+                    )
             elif cmd == pythonwifi.flags.SIOCGIWRATE:
                 freqsize = struct.calcsize("ihbb")
                 rates = []
@@ -1567,12 +1644,16 @@ class Iwscanresult(object):
             elif cmd == pythonwifi.flags.IWEVCUSTOM:
                 self.custom.append(data[1:])
             else:
-                raise ValueError("Unknown IW event command received. This " +
-                                 "command cannot be used to add information " +
-                                 "to the WiFi cell's profile.")
+                raise ValueError(
+                    "Unknown IW event command received. This "
+                    + "command cannot be used to add information "
+                    + "to the WiFi cell's profile."
+                )
         else:
-            raise ValueError("Invalid IW event command received.  \
-                              This command is not allowed.")
+            raise ValueError(
+                "Invalid IW event command received.  \
+                              This command is not allowed."
+            )
 
     def display(self):
         print("ESSID:", self.essid)
